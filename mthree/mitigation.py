@@ -10,6 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 # pylint: disable=no-name-in-module, invalid-name
+# THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL
 """Calibration data"""
 
 import warnings
@@ -38,7 +39,7 @@ from ._helpers import system_info
 
 class M3Mitigation():
     """Main M3 calibration class."""
-    def __init__(self, system=None, iter_threshold=4096):
+    def __init__(self, system=None, iter_threshold=4096, probs=None):
         """Main M3 calibration class.
 
         Parameters:
@@ -67,6 +68,7 @@ class M3Mitigation():
         self._job_error = None
         # Holds the cals file
         self.cals_file = None
+        self.probs = probs
 
     def __getattribute__(self, attr):
         """This allows for checking the status of the threaded cals call
@@ -671,7 +673,17 @@ def _job_thread(job, mit, method, qubits, num_cal_qubits, cal_strings):
     except Exception as error:
         mit._job_error = error
         return
+
     counts = res.get_counts()
+    if mit.probs is not None:
+        if len(qubits) < mit.probs.n_qubits:
+            probs = mit.probs.subset(len(qubits), participating_qubits = qubits)
+        else:
+            probs = mit.probs
+        if type(counts) is list:
+            counts = [probs(i) for i in res.get_counts()]
+        else:
+            counts = probs(res.get_counts())
     # attach timestamp
     timestamp = res.date
     # Needed since Aer result date is str but IBMQ job is datetime
